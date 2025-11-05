@@ -1,5 +1,5 @@
 using System.Collections;
-using Unity.Sentis;
+
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -11,7 +11,7 @@ public class VideoMatting : MonoBehaviour
     public RenderTexture OutputTexture => ouputCamera?.targetTexture;
 
     [SerializeField] private RenderTexture sourceTexture; //source texture 에 원본 데이터 넣기
-    [SerializeField] private ModelAsset modelAsset;
+    [SerializeField] private Unity.InferenceEngine.ModelAsset modelAsset;
     [SerializeField] private Material alphaMaterial;
     [SerializeField] private RawImage sketchRawImage;
     [SerializeField] private Camera ouputCamera;
@@ -20,23 +20,23 @@ public class VideoMatting : MonoBehaviour
 
     private RenderTexture _foregroundTexture;
     private RenderTexture _alphaTexture;
-    private Worker _worker;
-    private Model _runtimeModel;
+    private Unity.InferenceEngine.Worker _worker;
+    private Unity.InferenceEngine.Model _runtimeModel;
     private RenderTexture _resultRenderTexture;
-    private Tensor<float> _r1, _r2, _r3, _r4, _inputTensor, _downsampleRatioTensor;
+    private Unity.InferenceEngine.Tensor<float> _r1, _r2, _r3, _r4, _inputTensor, _downsampleRatioTensor;
     private Vector2 _previousResolution;
 
     void Awake()
     {
         //initialize model
-        _runtimeModel = ModelLoader.Load(modelAsset);
-        _worker = new Worker(_runtimeModel, BackendType.GPUCompute);
-        _r1 = new Tensor<float>(new TensorShape(1, 1, 1, 1), new float[] { 0.0f });
-        _r2 = new Tensor<float>(new TensorShape(1, 1, 1, 1), new float[] { 0.0f });
-        _r3 = new Tensor<float>(new TensorShape(1, 1, 1, 1), new float[] { 0.0f });
-        _r4 = new Tensor<float>(new TensorShape(1, 1, 1, 1), new float[] { 0.0f });
-        _inputTensor = new Tensor<float>(new TensorShape(1, 3, 1, 1));
-        _downsampleRatioTensor = new Tensor<float>(new TensorShape(1), new float[] { 1.0f });
+        _runtimeModel = Unity.InferenceEngine.ModelLoader.Load(modelAsset);
+        _worker = new Unity.InferenceEngine.Worker(_runtimeModel, Unity.InferenceEngine.BackendType.GPUCompute);
+        _r1 = new Unity.InferenceEngine.Tensor<float>(new Unity.InferenceEngine.TensorShape(1, 1, 1, 1), new float[] { 0.0f });
+        _r2 = new Unity.InferenceEngine.Tensor<float>(new Unity.InferenceEngine.TensorShape(1, 1, 1, 1), new float[] { 0.0f });
+        _r3 = new Unity.InferenceEngine.Tensor<float>(new Unity.InferenceEngine.TensorShape(1, 1, 1, 1), new float[] { 0.0f });
+        _r4 = new Unity.InferenceEngine.Tensor<float>(new Unity.InferenceEngine.TensorShape(1, 1, 1, 1), new float[] { 0.0f });
+        _inputTensor = new Unity.InferenceEngine.Tensor<float>(new Unity.InferenceEngine.TensorShape(1, 3, 1, 1));
+        _downsampleRatioTensor = new Unity.InferenceEngine.Tensor<float>(new Unity.InferenceEngine.TensorShape(1), new float[] { 1.0f });
         ouputCamera.backgroundColor = new Color(0, 0, 0, 0);
         sketchRawImage.material = alphaMaterial;
     }
@@ -87,13 +87,13 @@ public class VideoMatting : MonoBehaviour
 
 
             float optimalRatio = CalculateOptimalDownsampleRatio(textureWidth, textureHeight); // get downsaple ratio
-            var inputShape = new TensorShape(1, 3, textureHeight, textureWidth); // batch, channel, height, width
+            var inputShape = new Unity.InferenceEngine.TensorShape(1, 3, textureHeight, textureWidth); // batch, channel, height, width
             if (_inputTensor == null || !_inputTensor.shape.Equals(inputShape))
             {
                 _inputTensor?.Dispose();
-                _inputTensor = new Tensor<float>(inputShape);
+                _inputTensor = new Unity.InferenceEngine.Tensor<float>(inputShape);
             }
-            TextureConverter.ToTensor(sourceTexture, _inputTensor, new TextureTransform());
+            Unity.InferenceEngine.TextureConverter.ToTensor(sourceTexture, _inputTensor, new Unity.InferenceEngine.TextureTransform());
             _downsampleRatioTensor[0] = optimalRatio;
 
             _worker.SetInput("src", _inputTensor);
@@ -106,8 +106,8 @@ public class VideoMatting : MonoBehaviour
 
             yield return null;
 
-            var foregroundTensor = _worker.PeekOutput("fgr") as Tensor<float>;
-            var alphaTensor = _worker.PeekOutput("pha") as Tensor<float>;
+            var foregroundTensor = _worker.PeekOutput("fgr") as Unity.InferenceEngine.Tensor<float>;
+            var alphaTensor = _worker.PeekOutput("pha") as Unity.InferenceEngine.Tensor<float>;
 
             GetOrCreateRenderTexture(ref _foregroundTexture, textureWidth, textureHeight, "ForegroundRT");
             GetOrCreateRenderTexture(ref _alphaTexture, textureWidth, textureHeight, "AlphaRT");
@@ -123,8 +123,8 @@ public class VideoMatting : MonoBehaviour
             using (var foregroundOut = fgrAwaiter.GetResult())
             using (var alphaOut = alphaAwaiter.GetResult())
             {
-                TextureConverter.RenderToTexture(foregroundTensor, _foregroundTexture);
-                TextureConverter.RenderToTexture(alphaTensor, _alphaTexture);
+                Unity.InferenceEngine.TextureConverter.RenderToTexture(foregroundTensor, _foregroundTexture);
+                Unity.InferenceEngine.TextureConverter.RenderToTexture(alphaTensor, _alphaTexture);
             }
             
             try

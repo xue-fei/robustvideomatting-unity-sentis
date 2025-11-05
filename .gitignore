@@ -5,7 +5,6 @@ Builds/
 Logs/
 UserSettings/
 .vscode/
-Assets/Models/
 
 .vs
 .idea
@@ -14,4 +13,4 @@ Assets/Models/
 *.csproj
 *.tmp
 *.log
-Assets/VideMatting/Models/
+.vsconfig
